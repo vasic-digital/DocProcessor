@@ -1,0 +1,60 @@
+# CLAUDE.md
+
+## Project Overview
+
+DocProcessor is a Go module for loading project documentation, building structured feature maps, and tracking verification coverage. Part of the HelixQA ecosystem.
+
+**Go module:** `digital.vasic.docprocessor`
+
+## Build Commands
+
+```bash
+go build ./...                        # Build
+go test ./... -race -count=1          # Test with race detection
+go vet ./...                          # Static analysis
+make all                              # tidy + vet + test + build
+make test-cover                       # Test with coverage report
+```
+
+## MANDATORY Rules
+
+- **NO test may ever be removed, disabled, skipped, or left broken**
+- All tests must pass with `go test ./... -race -count=1`
+- All source files must have SPDX license headers (Apache-2.0)
+- CoverageTracker MUST remain thread-safe (sync.RWMutex)
+- DocGraph MUST remain thread-safe (sync.RWMutex)
+- LLMAgent interface MUST NOT have module-level dependencies
+
+## Package Layout
+
+```
+pkg/loader/    - Loader interface, Document, Section, markdown/yaml parsers, scanner
+pkg/feature/   - Feature, FeatureMap, FeatureMapBuilder, categories, screens
+pkg/coverage/  - CoverageTracker (thread-safe), CoverageReport, Evidence, Issue
+pkg/docgraph/  - DocGraph, Node, Edge, JSON/Mermaid export
+pkg/llm/       - LLMAgent interface, RawFeature, prompt templates
+pkg/config/    - Config from .env files
+cmd/docprocessor/ - CLI entry point
+```
+
+## Test Types
+
+- Unit tests (`*_test.go`)
+- Integration tests (`*_integration_test.go`)
+- Stress tests (`*_stress_test.go`) -- concurrent operations
+- Security tests (`*_security_test.go`) -- path traversal, large files, malformed input
+- E2E tests (`e2e_test.go`) -- full pipeline with mock LLMAgent
+- Automation tests (`automation_test.go`) -- build validation, package structure
+
+## Key Patterns
+
+- `CoverageTracker`: Read operations use `RLock()`, write operations use `Lock()`
+- `DocGraph`: Thread-safe with `sync.RWMutex`
+- Feature IDs: Deterministic via `GenerateID(name)` -- slug + hash suffix for long names
+- MaxFileSize: 10 MB limit on loaded files
+- LLMAgent: Injected interface, no module-level dependency on LLMOrchestrator
+
+## Dependencies
+
+- `github.com/stretchr/testify` (testing)
+- `gopkg.in/yaml.v3` (YAML parsing)
